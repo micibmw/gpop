@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>✦ GIRLY POP SOS ✦</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Space+Grotesk:wght@500;700&family=Syne:wght@800&display=swap" rel="stylesheet">
+    <!-- Uvoz Supabase biblioteke -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
@@ -75,10 +76,11 @@
         const SECRET_PASSWORD = "pop";
         const PUBLIC_VAPID_KEY = "BIi_yLexmy9TkdgyamMKLZ7OtRJzHlnFflTPDbaj9t1NhxnRTnYr8rjVBvb0l_tbMtNZ9lRvgpvBuIRWJEOPBh8";
         
-        // Zvanično povezan tvoj Supabase projekat! 🛠️
         const SUPABASE_URL = "https://ljtssjzpnzdqixvqjptr.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdHNzanpwbnpkcWl4dnFqcHRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMzY0NzEsImV4cCI6MjA5NTkxMjQ3MX0.K0PMAU_0BMCjRKZCSmVbhFDTUfLleruSgL5RpVB52bY";
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // POPRAVKA: Ovako se ispravno pokreće klijent preko CDN skripte
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentSubscription = null;
 
@@ -126,8 +128,7 @@
                     applicationServerKey: convertedKey
                 });
 
-                // Upisivanje tokena direktno u tvoju novu tabelu na Supabase-u
-                const { error } = await supabase
+                const { error } = await _supabase
                     .from('subscribers')
                     .insert([{ 
                         user_name: name, 
@@ -147,8 +148,8 @@
             status.innerHTML = "⚡ BLASTING BESTIES... ⚡";
 
             try {
-                // Pozivanje Supabase Edge funkcije koja koristi privatni ključ da pošalje signal telefonima
-                const { data, error } = await supabase.functions.invoke('blast-sos', {
+                // Pozivanje Edge funkcije preko ispravljenog klijenta
+                const { data, error } = await _supabase.functions.invoke('blast-sos', {
                     body: { message: "🚨 GIRLY POP NEED BACKUP! Check the chat! 🚨" }
                 });
 
