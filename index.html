@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>✦ GIRLY POP SOS ✦</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Space+Grotesk:wght@500;700&family=Syne:wght@800&display=swap" rel="stylesheet">
-    <!-- Uvoz Supabase biblioteke -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
@@ -38,9 +37,11 @@
         .btn:hover { transform: scale(1.05); box-shadow: 0 0 20px var(--hot-pink); }
         .sos-wrapper { margin: 30px auto; position: relative; width: 160px; height: 160px; }
         .sos-btn { width: 100%; height: 100%; border-radius: 50%; background: radial-gradient(circle, #ff0055 0%, #990033 100%); border: 6px solid #fff; color: white; font-family: 'Orbitron', sans-serif; font-size: 2.2rem; cursor: pointer; box-shadow: 0 0 30px var(--hot-pink); position: relative; z-index: 2; }
+        .sos-btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .pulse-ring { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; background: var(--hot-pink); animation: pulse 2s infinite; z-index: 1; }
-        .status-text { font-size: 0.9rem; color: var(--baby-pink); margin-top: 15px; }
+        .status-text { font-size: 0.9rem; color: var(--baby-pink); margin-top: 15px; min-height: 1.5em; }
         .setup-box { border-top: 1px dashed var(--neon-blue); margin-top: 25px; padding-top: 20px; }
+        .registered-badge { font-size: 0.8rem; color: #00ff88; margin-top: 8px; }
         @keyframes pulse { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(1.4); opacity: 0; } }
     </style>
 </head>
@@ -52,7 +53,7 @@
 
         <!-- LOGIN -->
         <div id="login-screen" class="screen active">
-            <input type="password" id="password-input" placeholder="ENTER SECRET PASSWORD">
+            <input type="password" id="password-input" placeholder="ENTER SECRET PASSWORD" onkeydown="if(event.key==='Enter') checkPassword()">
             <button class="btn" onclick="checkPassword()">Enter</button>
         </div>
 
@@ -60,7 +61,7 @@
         <div id="main-screen" class="screen">
             <div class="sos-wrapper">
                 <div class="pulse-ring"></div>
-                <button class="sos-btn" onclick="triggerSOS()">SOS</button>
+                <button class="sos-btn" id="sos-btn" onclick="triggerSOS()">SOS</button>
             </div>
             <p class="status-text" id="status-display">Status: Ready to blast 💖</p>
 
@@ -68,6 +69,7 @@
                 <p style="font-size: 0.8rem; color: var(--neon-blue); margin-bottom: 10px;">👇 CONNECT DEVICE TO NETWORK 👇</p>
                 <input type="text" id="username-input" placeholder="Your Name (e.g., Chloe)">
                 <button class="btn" style="font-size: 0.8rem; padding: 8px 15px;" onclick="subscribeDevice()">Enable My Alerts</button>
+                <p class="registered-badge" id="reg-badge"></p>
             </div>
         </div>
     </div>
@@ -79,10 +81,9 @@
         const SUPABASE_URL = "https://ljtssjzpnzdqixvqjptr.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdHNzanpwbnpkcWl4dnFqcHRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMzY0NzEsImV4cCI6MjA5NTkxMjQ3MX0.K0PMAU_0BMCjRKZCSmVbhFDTUfLleruSgL5RpVB52bY";
         
-        // POPRAVKA: Ovako se ispravno pokreće klijent preko CDN skripte
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        let currentSubscription = null;
+        let swRegistration = null;
 
         function checkPassword() {
             if (document.getElementById('password-input').value === SECRET_PASSWORD) {
@@ -95,20 +96,29 @@
         }
 
         async function initServiceWorker() {
-            if ('serviceWorker' in navigator && 'PushManager' in window) {
-                try {
-                    const reg = await navigator.serviceWorker.register('sw.js');
-                    console.log('Service Worker spreman!', reg);
-                    currentSubscription = await reg.pushManager.getSubscription();
-                } catch (err) {
-                    console.error('Service Worker greška:', err);
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                document.getElementById('status-display').innerHTML = "⚠️ Browser ne podržava push notifikacije!";
+                return;
+            }
+            try {
+                // FIX 1: Ime fajla mora biti 'sw.js' (ne 'sw_js.js')
+                swRegistration = await navigator.serviceWorker.register('sw.js');
+                console.log('Service Worker spreman!', swRegistration);
+
+                // Proveri da li je uređaj već pretplaćen
+                const existingSub = await swRegistration.pushManager.getSubscription();
+                if (existingSub) {
+                    document.getElementById('reg-badge').textContent = "✅ Uređaj je već registrovan!";
                 }
+            } catch (err) {
+                console.error('Service Worker greška:', err);
+                document.getElementById('status-display').innerHTML = "⚠️ SW greška: " + err.message;
             }
         }
 
         function urlBase64ToUint8Array(base64String) {
             const padding = '='.repeat((4 - base64String.length % 4) % 4);
-            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
             const rawData = window.atob(base64);
             const outputArray = new Uint8Array(rawData.length);
             for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
@@ -118,46 +128,70 @@
         async function subscribeDevice() {
             const name = document.getElementById('username-input').value.trim();
             if (!name) { alert("Zaboravila si ime, babe!"); return; }
+            if (!swRegistration) { alert("Service Worker nije spreman. Sačekaj sekund i pokušaj ponovo."); return; }
 
             try {
                 const reg = await navigator.serviceWorker.ready;
                 const convertedKey = urlBase64ToUint8Array(PUBLIC_VAPID_KEY);
                 
-                currentSubscription = await reg.pushManager.subscribe({
+                // Otkaži postojeću pretplatu pre nego što napraviš novu
+                const existingSub = await reg.pushManager.getSubscription();
+                if (existingSub) {
+                    await existingSub.unsubscribe();
+                }
+
+                const subscription = await reg.pushManager.subscribe({
                     userVisibleOnly: true,
                     applicationServerKey: convertedKey
                 });
 
+                const subJson = JSON.stringify(subscription);
+
+                // FIX 2: Upsert umesto insert — isti korisnik neće praviti duplikate
                 const { error } = await _supabase
                     .from('subscribers')
-                    .insert([{ 
-                        user_name: name, 
-                        device_token: JSON.stringify(currentSubscription) 
-                    }]);
+                    .upsert(
+                        [{ user_name: name, device_token: subJson }],
+                        { onConflict: 'user_name' }  // Potreban je UNIQUE constraint na user_name koloni u Supabase-u
+                    );
 
                 if (error) throw error;
-                alert(`✨ To je to! ${name} je uspešno registrovana u bazi!`);
+
+                document.getElementById('reg-badge').textContent = `✅ ${name} je registrovana!`;
+                document.getElementById('username-input').value = '';
+                alert(`✨ To je to! ${name} će primati SOS notifikacije!`);
             } catch (err) {
                 console.error(err);
-                alert("Greška sa registracijom! Proveri da li si dozvolila notifikacije na telefonu/browseru.");
+                alert("Greška sa registracijom! Proveri da li si dozvolila notifikacije.\n\nDetalji: " + err.message);
             }
         }
 
         async function triggerSOS() {
             const status = document.getElementById('status-display');
+            const btn = document.getElementById('sos-btn');
+            
+            btn.disabled = true;
             status.innerHTML = "⚡ BLASTING BESTIES... ⚡";
 
             try {
-                // Pozivanje Edge funkcije preko ispravljenog klijenta
                 const { data, error } = await _supabase.functions.invoke('blast-sos', {
-                    body: { message: "🚨 GIRLY POP NEED BACKUP! Check the chat! 🚨" }
+                    body: { message: "🚨 GIRLY POP TREBA BACKUP! Proveri chat! 🚨" }
                 });
 
                 if (error) throw error;
-                status.innerHTML = "Blasted! Pomoć stiže! 🎀";
+
+                status.innerHTML = "✅ Blasted! Pomoć stiže! 🎀";
+                console.log("Odgovor servera:", data);
             } catch (err) {
                 console.error(err);
-                status.innerHTML = "Greška sa slanjem mreži! 😭";
+                status.innerHTML = "❌ Greška sa slanjem! 😭";
+                alert("Detalji greške: " + err.message);
+            } finally {
+                // Ponovo aktiviraj dugme posle 5 sekundi
+                setTimeout(() => {
+                    btn.disabled = false;
+                    status.innerHTML = "Status: Ready to blast 💖";
+                }, 5000);
             }
         }
     </script>
