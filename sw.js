@@ -13,9 +13,9 @@ self.addEventListener('push', function(event) {
 
   const options = {
     body: data.body,
-    icon: 'https://fav.farm/%F0%9F%92%85', // Cute nail polish emoji icon
-    badge: 'https://fav.farm/%E2%9C%A8', // Sparkle badge
-    vibrate: [200, 100, 200, 100, 200], // SOS vibration pattern
+    icon: 'https://fav.farm/%F0%9F%92%85',
+    badge: 'https://fav.farm/%E2%9C%A8',
+    vibrate: [200, 100, 200, 100, 200],
     data: {
       dateOfArrival: Date.now()
     },
@@ -29,7 +29,6 @@ self.addEventListener('push', function(event) {
   );
 });
 
-// Open the app when clicking the notification
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   event.waitUntil(
