@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✦ GIRLY POP SOS ✦</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Space+Grotesk:wght@500;700&family=Syne:wght@800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        :root {
+            --hot-pink: #ff007f;
+            --baby-pink: #ffb6c1;
+            --cyber-purple: #9400d3;
+            --neon-blue: #00f0ff;
+            --dark-bg: #120116;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Space Grotesk', sans-serif; }
+        body {
+            background-color: var(--dark-bg);
+            background-image: radial-gradient(rgba(255, 0, 127, 0.15) 1px, transparent 0), radial-gradient(rgba(0, 240, 255, 0.1) 1px, transparent 0);
+            background-size: 20px 20px; background-position: 0 0, 10px 10px;
+            color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh;
+        }
+        .container {
+            background: rgba(20, 0, 25, 0.85); border: 4px solid var(--hot-pink); border-radius: 20px;
+            padding: 30px; width: 90%; max-width: 400px; text-align: center;
+            box-shadow: 0px 0px 20px var(--hot-pink), inset 0px 0px 15px rgba(255, 0, 127, 0.5); position: relative; backdrop-filter: blur(5px);
+        }
+        h1 { font-family: 'Syne', sans-serif; font-size: 2.2rem; text-shadow: 0 0 10px var(--hot-pink), 0 0 20px var(--cyber-purple); text-transform: uppercase; letter-spacing: 2px; }
+        .subtitle { font-size: 0.85rem; color: var(--baby-pink); letter-spacing: 3px; margin-bottom: 25px; text-transform: uppercase; }
+        .screen { display: none; }
+        .screen.active { display: block; }
+        input { width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.1); border: 2px solid var(--neon-blue); border-radius: 10px; color: #fff; font-size: 1.1rem; text-align: center; margin-bottom: 15px; outline: none; }
+        input:focus { box-shadow: 0 0 15px var(--neon-blue); }
+        .btn { background: linear-gradient(45deg, var(--hot-pink), var(--cyber-purple)); color: white; border: 2px solid #fff; padding: 12px 25px; font-size: 1rem; font-weight: bold; border-radius: 50px; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
+        .btn:hover { transform: scale(1.05); box-shadow: 0 0 20px var(--hot-pink); }
+        .sos-wrapper { margin: 30px auto; position: relative; width: 160px; height: 160px; }
+        .sos-btn { width: 100%; height: 100%; border-radius: 50%; background: radial-gradient(circle, #ff0055 0%, #990033 100%); border: 6px solid #fff; color: white; font-family: 'Orbitron', sans-serif; font-size: 2.2rem; cursor: pointer; box-shadow: 0 0 30px var(--hot-pink); position: relative; z-index: 2; }
+        .pulse-ring { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; background: var(--hot-pink); animation: pulse 2s infinite; z-index: 1; }
+        .status-text { font-size: 0.9rem; color: var(--baby-pink); margin-top: 15px; }
+        .setup-box { border-top: 1px dashed var(--neon-blue); margin-top: 25px; padding-top: 20px; }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(1.4); opacity: 0; } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Girly Pop</h1>
+        <div class="subtitle">✦ SOS Network ✦</div>
+
+        <!-- LOGIN -->
+        <div id="login-screen" class="screen active">
+            <input type="password" id="password-input" placeholder="ENTER SECRET PASSWORD">
+            <button class="btn" onclick="checkPassword()">Enter</button>
+        </div>
+
+        <!-- DASHBOARD -->
+        <div id="main-screen" class="screen">
+            <div class="sos-wrapper">
+                <div class="pulse-ring"></div>
+                <button class="sos-btn" onclick="triggerSOS()">SOS</button>
+            </div>
+            <p class="status-text" id="status-display">Status: Ready to blast 💖</p>
+
+            <div class="setup-box">
+                <p style="font-size: 0.8rem; color: var(--neon-blue); margin-bottom: 10px;">👇 CONNECT DEVICE TO NETWORK 👇</p>
+                <input type="text" id="username-input" placeholder="Your Name (e.g., Chloe)">
+                <button class="btn" style="font-size: 0.8rem; padding: 8px 15px;" onclick="subscribeDevice()">Enable My Alerts</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SECRET_PASSWORD = "pop";
+        const PUBLIC_VAPID_KEY = "BIi_yLexmy9TkdgyamMKLZ7OtRJzHlnFflTPDbaj9t1NhxnRTnYr8rjVBvb0l_tbMtNZ9lRvgpvBuIRWJEOPBh8";
+        
+        // ⚠️ ADD YOUR SUPABASE CREDENTIALS HERE
+        const SUPABASE_URL = "https://your-project-id.supabase.co";
+        const SUPABASE_ANON_KEY = "your-anon-public-key";
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentSubscription = null;
+
+        function checkPassword() {
+            if (document.getElementById('password-input').value === SECRET_PASSWORD) {
+                document.getElementById('login-screen').classList.remove('active');
+                document.getElementById('main-screen').classList.add('active');
+                initServiceWorker();
+            } else {
+                alert("Wrong password, bestie! 💅");
+            }
+        }
+
+        // Register worker and hook up push channel
+        async function initServiceWorker() {
+            if ('serviceWorker' in navigator && 'PushManager' in window) {
+                try {
+                    const reg = await navigator.serviceWorker.register('sw.js');
+                    console.log('Service Worker registered!', reg);
+                    
+                    // Check if already subscribed
+                    currentSubscription = await reg.pushManager.getSubscription();
+                } catch (err) {
+                    console.error('Service Worker installation failed', err);
+                }
+            }
+        }
+
+        // Helper to convert base64 VAPID string into typed array
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
+            return outputArray;
+        }
+
+        async function subscribeDevice() {
+            const name = document.getElementById('username-input').value.trim();
+            if (!name) { alert("Enter your name, babe!"); return; }
+
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                const convertedKey = urlBase64ToUint8Array(PUBLIC_VAPID_KEY);
+                
+                // Ask browser user permission and generate explicit browser keys
+                currentSubscription = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: convertedKey
+                });
+
+                // Send the deep browser payload object back to Supabase
+                const { error } = await supabase
+                    .from('subscribers')
+                    .insert([{ 
+                        user_name: name, 
+                        device_token: JSON.stringify(currentSubscription) 
+                    }]);
+
+                if (error) throw error;
+                alert(`✨ Perfect! ${name} is locked and loaded!`);
+            } catch (err) {
+                console.error(err);
+                alert("Subscription failed! Make sure you are on https:// and allowed notifications.");
+            }
+        }
+
+        async function triggerSOS() {
+            const status = document.getElementById('status-display');
+            status.innerHTML = "⚡ BLASTING BESTIES... ⚡";
+
+            try {
+                // Fetch the device keys of everyone registered in your Database
+                const { data: squad, error } = await supabase.from('subscribers').select('*');
+                if (error) throw error;
+
+                // Fire off web hooks to your database function to execute Web Push
+                // We will use a Supabase Database Webhook or Edge Function to process your Private VAPID Key!
+                const { data, errFunc } = await supabase.functions.invoke('blast-sos', {
+                    body: { message: "🚨 GIRLY POP NEED BACKUP! Check the chat! 🚨" }
+                });
+
+                status.innerHTML = "Blasted! Check your phone! 🎀";
+            } catch (err) {
+                console.error(err);
+                status.innerHTML = "Network blast glitch! 😭";
+            }
+        }
+    </script>
+</body>
+</html>
