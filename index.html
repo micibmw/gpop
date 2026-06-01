@@ -75,9 +75,9 @@
         const SECRET_PASSWORD = "pop";
         const PUBLIC_VAPID_KEY = "BIi_yLexmy9TkdgyamMKLZ7OtRJzHlnFflTPDbaj9t1NhxnRTnYr8rjVBvb0l_tbMtNZ9lRvgpvBuIRWJEOPBh8";
         
-        // ⚠️ ADD YOUR SUPABASE CREDENTIALS HERE
-        const SUPABASE_URL = "https://your-project-id.supabase.co";
-        const SUPABASE_ANON_KEY = "your-anon-public-key";
+        // Zvanično povezan tvoj Supabase projekat! 🛠️
+        const SUPABASE_URL = "https://ljtssjzpnzdqixvqjptr.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdHNzanpwbnpkcWl4dnFqcHRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMzY0NzEsImV4cCI6MjA5NTkxMjQ3MX0.K0PMAU_0BMCjRKZCSmVbhFDTUfLleruSgL5RpVB52bY";
         const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentSubscription = null;
@@ -92,22 +92,18 @@
             }
         }
 
-        // Register worker and hook up push channel
         async function initServiceWorker() {
             if ('serviceWorker' in navigator && 'PushManager' in window) {
                 try {
                     const reg = await navigator.serviceWorker.register('sw.js');
-                    console.log('Service Worker registered!', reg);
-                    
-                    // Check if already subscribed
+                    console.log('Service Worker spreman!', reg);
                     currentSubscription = await reg.pushManager.getSubscription();
                 } catch (err) {
-                    console.error('Service Worker installation failed', err);
+                    console.error('Service Worker greška:', err);
                 }
             }
         }
 
-        // Helper to convert base64 VAPID string into typed array
         function urlBase64ToUint8Array(base64String) {
             const padding = '='.repeat((4 - base64String.length % 4) % 4);
             const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
@@ -119,19 +115,18 @@
 
         async function subscribeDevice() {
             const name = document.getElementById('username-input').value.trim();
-            if (!name) { alert("Enter your name, babe!"); return; }
+            if (!name) { alert("Zaboravila si ime, babe!"); return; }
 
             try {
                 const reg = await navigator.serviceWorker.ready;
                 const convertedKey = urlBase64ToUint8Array(PUBLIC_VAPID_KEY);
                 
-                // Ask browser user permission and generate explicit browser keys
                 currentSubscription = await reg.pushManager.subscribe({
                     userVisibleOnly: true,
                     applicationServerKey: convertedKey
                 });
 
-                // Send the deep browser payload object back to Supabase
+                // Upisivanje tokena direktno u tvoju novu tabelu na Supabase-u
                 const { error } = await supabase
                     .from('subscribers')
                     .insert([{ 
@@ -140,10 +135,10 @@
                     }]);
 
                 if (error) throw error;
-                alert(`✨ Perfect! ${name} is locked and loaded!`);
+                alert(`✨ To je to! ${name} je uspešno registrovana u bazi!`);
             } catch (err) {
                 console.error(err);
-                alert("Subscription failed! Make sure you are on https:// and allowed notifications.");
+                alert("Greška sa registracijom! Proveri da li si dozvolila notifikacije na telefonu/browseru.");
             }
         }
 
@@ -152,20 +147,16 @@
             status.innerHTML = "⚡ BLASTING BESTIES... ⚡";
 
             try {
-                // Fetch the device keys of everyone registered in your Database
-                const { data: squad, error } = await supabase.from('subscribers').select('*');
-                if (error) throw error;
-
-                // Fire off web hooks to your database function to execute Web Push
-                // We will use a Supabase Database Webhook or Edge Function to process your Private VAPID Key!
-                const { data, errFunc } = await supabase.functions.invoke('blast-sos', {
+                // Pozivanje Supabase Edge funkcije koja koristi privatni ključ da pošalje signal telefonima
+                const { data, error } = await supabase.functions.invoke('blast-sos', {
                     body: { message: "🚨 GIRLY POP NEED BACKUP! Check the chat! 🚨" }
                 });
 
-                status.innerHTML = "Blasted! Check your phone! 🎀";
+                if (error) throw error;
+                status.innerHTML = "Blasted! Pomoć stiže! 🎀";
             } catch (err) {
                 console.error(err);
-                status.innerHTML = "Network blast glitch! 😭";
+                status.innerHTML = "Greška sa slanjem mreži! 😭";
             }
         }
     </script>
